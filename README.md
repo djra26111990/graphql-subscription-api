@@ -32,4 +32,8 @@ Si usas npm
 
 ### `npm run start` - Para iniciar con node index.js
 
+Luego de iniciar el server graphQL veras en la url de conexión para abrir el graphQL Playground
+
+## `http://localhost:4000/graphql` 
+
 ## Proyecto divertido para aprender fundamentos de GraphQL!!!
