@@ -1,74 +1,42 @@
 import { PubSub } from "graphql-subscriptions";
-
+import Person from "../models/persons.models.js";
 
 const pubsub = new PubSub();
 
-const personas = [
-    {
-      id: "1",
-      firstName: "Daniel",
-      lastName: "Rivas",
-      age: 30,
-      role: "admin",
-    },
-    {
-      id: "2",
-      firstName: "Marelys",
-      lastName: "Escobar",
-      age: 26,
-      role: "user",
-    },
-    {
-      id: "3",
-      firstName: "John",
-      lastName: "Doe",
-      age: 999999,
-      role: "user",
-    },
-  ];
-
 const resolvers = {
-    Query: {
-      personCount: () => personas.length,
-      allPersons: () => personas,
-      findPerson: (root, args) => {
-        const { firstName } = args;
-        return (
-          personas.find((persona) => persona.firstName === firstName) || {
-            id: "".trim(),
-            age: 0,
-            firstName: "".trim(),
-            lastName: "".trim(),
-            fullName: "".trim(),
-          }
-        );
-      },
+  Query: {
+    personCount: async () => Person.countDocuments({}),
+    allPersons: async () => {
+      const Personas = await Person.find().exec();
+      return Personas;
     },
-    Person: {
-      fullName: (root) => `${root.firstName} ${root.lastName}`,
-      canDrink: (root) => root.age > 18,
-      isAdmin: (root) => root.role === "admin",
+    findPerson: async (root, args) => {
+      const { firstName } = args
+      const person = await Person.find(
+        {
+          firstName: firstName,
+        },
+        { createdAt: 0, updatedAt: 0, __v: 0 }
+      ).exec()
+      return person[0]
     },
-    Mutation: {
-      newPerson: (root, args) => {
-        const { id, firstName, lastName, age, role } = args;
-        const person = {
-          id,
-          firstName,
-          lastName,
-          age,
-          role,
-        };
-        personas.push(person);
-        pubsub.publish("NEW_PERSON", { personCreated: person });
-        return personas.find((persona) => persona.firstName === firstName);
-      },
+  },
+  Person: {
+    fullName: (root) => `${root.firstName} ${root.lastName}`,
+    canDrink: (root) => root.age > 18,
+    isAdmin: (root) => root.role === "admin",
+  },
+  Mutation: {
+    newPerson: (root, { input }) => {
+      pubsub.publish("NEW_PERSON", { personCreated: input });
+      return Person.create(input)
     },
-    Subscription: {
-      personCreated: {
-        subscribe: () => pubsub.asyncIterator("NEW_PERSON"),
-      },
+  },
+  Subscription: {
+    personCreated: {
+      subscribe: () => pubsub.asyncIterator("NEW_PERSON"),
     },
-  };
+  },
+};
 
-  export default resolvers
+export default resolvers;
