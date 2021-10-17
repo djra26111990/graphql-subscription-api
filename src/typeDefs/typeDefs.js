@@ -1,7 +1,7 @@
-import { gql } from 'apollo-server-express'
+import { gql } from "apollo-server-express";
 
 const typeDefs = gql`
-type Person {
+  type Person {
     id: ID!
     firstName: String!
     lastName: String!
@@ -18,19 +18,20 @@ type Person {
     findPerson(firstName: String!): Person
   }
 
+  input PersonInput {
+    firstName: String!
+    lastName: String!
+    age: Int!
+    role: String!
+  }
+
   type Mutation {
-    newPerson(
-      id: ID!
-      firstName: String!
-      lastName: String!
-      age: Int!
-      role: String!
-    ): Person
+    newPerson(input: PersonInput): Person
   }
 
   type Subscription {
     personCreated: Person!
   }
-`
+`;
 
-export default typeDefs
+export default typeDefs;
