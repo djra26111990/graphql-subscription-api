@@ -1,36 +1,44 @@
 import { gql } from "apollo-server-express";
 
 const typeDefs = gql`
-  type Person {
+  type User {
     id: ID!
     firstName: String!
     lastName: String!
     fullName: String!
-    age: Int!
-    role: String!
-    canDrink: Boolean!
-    isAdmin: Boolean!
+    email: String!
+    password: String!
   }
 
   type Query {
-    personCount: Int!
-    allPersons: [Person]!
-    findPerson(firstName: String!): Person
+    userCount: Int!
+    allUsers: [User]!
+    findUser(firstName: String!): User
   }
 
-  input PersonInput {
+  input newUserInput {
     firstName: String!
     lastName: String!
-    age: Int!
-    role: String!
+    email: String!
+    password: String!
+  }
+
+  input LoginInput {
+    email: String!
+    password: String!
   }
 
   type Mutation {
-    newPerson(input: PersonInput): Person
+    signup(input: newUserInput): AuthPayload!
+    login(input: LoginInput): AuthPayload!
+  }
+
+  type AuthPayload {
+    token: String!
   }
 
   type Subscription {
-    personCreated: Person!
+    userCreated: User!
   }
 `;
 
