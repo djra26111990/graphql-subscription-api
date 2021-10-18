@@ -1,40 +1,74 @@
 import { PubSub } from "graphql-subscriptions";
-import Person from "../models/persons.models.js";
+import User from "../models/persons.models.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import utils from "../utils/utils.js";
 
 const pubsub = new PubSub();
 
 const resolvers = {
   Query: {
-    personCount: async () => Person.countDocuments({}),
-    allPersons: async () => {
-      const Personas = await Person.find().exec();
-      return Personas;
+    userCount: async () => User.countDocuments({}),
+    allUsers: async () => {
+      const Users = await User.find().exec();
+      return Users;
     },
-    findPerson: async (root, args) => {
-      const { firstName } = args
-      const person = await Person.find(
+    findUser: async (root, args) => {
+      const { firstName } = args;
+      const user = await User.find(
         {
           firstName: firstName,
         },
         { createdAt: 0, updatedAt: 0, __v: 0 }
-      ).exec()
-      return person[0]
+      ).exec();
+      return user[0];
     },
   },
-  Person: {
+  User: {
     fullName: (root) => `${root.firstName} ${root.lastName}`,
-    canDrink: (root) => root.age > 18,
-    isAdmin: (root) => root.role === "admin",
   },
   Mutation: {
-    newPerson: (root, { input }) => {
-      pubsub.publish("NEW_PERSON", { personCreated: input });
-      return Person.create(input)
+    signup: async (root, { input }) => {
+      const password = await bcrypt.hash(input.password, 10);
+      const newUser = {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        password: password,
+      };
+
+      const createUser = await User.create(newUser);
+
+      const token = jwt.sign({ email: input.email }, utils.APP_SECRET);
+
+      pubsub.publish("NEW_USER", { userCreated: newUser });
+      return { token };
+    },
+    login: async (root, { input }) => {
+      const user = await User.find(
+        {
+          email: input.email,
+        },
+        { createdAt: 0, updatedAt: 0, __v: 0 }
+      ).exec();
+
+      if (!user.length) {
+        throw new Error("No existe el usuario");
+      }
+
+      const valid = await bcrypt.compare(input.password, user.length ? user[0].password : '');
+      if (!valid) {
+        throw new Error("Clave invalida");
+      }
+
+      const token = jwt.sign({ email: input.email }, utils.APP_SECRET);
+
+      return { token };
     },
   },
   Subscription: {
-    personCreated: {
-      subscribe: () => pubsub.asyncIterator("NEW_PERSON"),
+    userCreated: {
+      subscribe: () => pubsub.asyncIterator("NEW_USER"),
     },
   },
 };
