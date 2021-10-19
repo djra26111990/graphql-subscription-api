@@ -26,18 +26,6 @@ export default async function StartServer() {
             : null
       };
     },
-    subscriptions: {
-      onConnect: (connectionParams) => {
-        if (connectionParams.authToken) {
-          return {
-            userEmail: utils.getUserEmail(
-              null,
-              connectionParams.authToken
-            )
-          };
-        }
-      }
-    },
     plugins: [ApolloServerPluginLandingPageGraphQLPlayground],
   });
 
