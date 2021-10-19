@@ -18,6 +18,14 @@ Si usas npm
 
 ### `npm i`
 
+## Modificar
+
+Renombra archivo .env.dev a .env y agrega a la variable ATLAS_URI tu mongodb uri
+
+Por defecto viene vacia la variable
+
+### `ATLAS_URI=''`
+
 ## Scripts disponibles
 
 Si usas yarn

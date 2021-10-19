@@ -1,74 +1,81 @@
 import { PubSub } from "graphql-subscriptions";
-
+import User from "../models/persons.models.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import utils from "../utils/utils.js";
 
 const pubsub = new PubSub();
 
-const personas = [
-    {
-      id: "1",
-      firstName: "Daniel",
-      lastName: "Rivas",
-      age: 30,
-      role: "admin",
-    },
-    {
-      id: "2",
-      firstName: "Marelys",
-      lastName: "Escobar",
-      age: 26,
-      role: "user",
-    },
-    {
-      id: "3",
-      firstName: "John",
-      lastName: "Doe",
-      age: 999999,
-      role: "user",
-    },
-  ];
-
 const resolvers = {
-    Query: {
-      personCount: () => personas.length,
-      allPersons: () => personas,
-      findPerson: (root, args) => {
-        const { firstName } = args;
-        return (
-          personas.find((persona) => persona.firstName === firstName) || {
-            id: "".trim(),
-            age: 0,
-            firstName: "".trim(),
-            lastName: "".trim(),
-            fullName: "".trim(),
-          }
-        );
-      },
+  Query: {
+    userCount: async (root, args, context) => {
+      if (!context.userEmail) throw Error('User not authenticated')
+      return User.countDocuments({})
     },
-    Person: {
-      fullName: (root) => `${root.firstName} ${root.lastName}`,
-      canDrink: (root) => root.age > 18,
-      isAdmin: (root) => root.role === "admin",
+    allUsers: async (root, args, context) => {
+      if (!context.userEmail) throw Error('User not authenticated')
+      const Users = await User.find().exec();
+      return Users;
     },
-    Mutation: {
-      newPerson: (root, args) => {
-        const { id, firstName, lastName, age, role } = args;
-        const person = {
-          id,
-          firstName,
-          lastName,
-          age,
-          role,
-        };
-        personas.push(person);
-        pubsub.publish("NEW_PERSON", { personCreated: person });
-        return personas.find((persona) => persona.firstName === firstName);
-      },
+    findUser: async (root, args, context) => {
+      const { firstName } = args;
+      if (!context.userEmail) throw Error('User not authenticated')
+      const user = await User.find(
+        {
+          firstName: firstName,
+        },
+        { createdAt: 0, updatedAt: 0, __v: 0 }
+      ).exec();
+      return user[0];
     },
-    Subscription: {
-      personCreated: {
-        subscribe: () => pubsub.asyncIterator("NEW_PERSON"),
-      },
-    },
-  };
+  },
+  User: {
+    fullName: (root) => `${root.firstName} ${root.lastName}`,
+  },
+  Mutation: {
+    signup: async (root, { input }) => {
+      const password = await bcrypt.hash(input.password, 10);
+      const newUser = {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        password: password,
+      };
 
-  export default resolvers
+      const createUser = await User.create(newUser);
+
+      const token = jwt.sign({ email: input.email }, utils.APP_SECRET);
+
+      pubsub.publish("NEW_USER", { userCreated: newUser });
+      return { token };
+    },
+    login: async (root, { input }) => {
+      const user = await User.find(
+        {
+          email: input.email,
+        },
+        { createdAt: 0, updatedAt: 0, __v: 0 }
+      ).exec();
+
+      if (!user.length) {
+        throw new Error("No existe el usuario");
+      }
+
+      const valid = await bcrypt.compare(input.password, user.length ? user[0].password : '');
+      if (!valid) {
+        throw new Error("Clave invalida");
+      }
+
+      const token = jwt.sign({ email: input.email }, utils.APP_SECRET);
+
+      return { token };
+    },
+  },
+  Subscription: {
+    userCreated: {
+      subscribe: () => pubsub.asyncIterator("NEW_USER"),
+    },
+  },
+};
+
+export default resolvers;
