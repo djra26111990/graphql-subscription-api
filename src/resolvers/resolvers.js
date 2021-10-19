@@ -9,20 +9,19 @@ const pubsub = new PubSub();
 const resolvers = {
   Query: {
     userCount: async (root, args, context) => {
-      if (!context.userEmail) throw Error('User not authenticated')
-      return User.countDocuments({})
+      if (!context.userEmail) throw Error("User not authenticated");
+      return User.countDocuments({});
     },
     allUsers: async (root, args, context) => {
-      if (!context.userEmail) throw Error('User not authenticated')
+      if (!context.userEmail) throw Error("User not authenticated");
       const Users = await User.find().exec();
       return Users;
     },
-    findUser: async (root, args, context) => {
-      const { firstName } = args;
-      if (!context.userEmail) throw Error('User not authenticated')
+    findUser: async (root, { firstName }, context) => {
+      if (!context.userEmail) throw Error("User not authenticated");
       const user = await User.find(
         {
-          firstName: firstName,
+          firstName,
         },
         { createdAt: 0, updatedAt: 0, __v: 0 }
       ).exec();
@@ -61,7 +60,10 @@ const resolvers = {
         throw new Error("No existe el usuario");
       }
 
-      const valid = await bcrypt.compare(input.password, user.length ? user[0].password : '');
+      const valid = await bcrypt.compare(
+        input.password,
+        user.length ? user[0].password : ""
+      );
       if (!valid) {
         throw new Error("Clave invalida");
       }
@@ -70,6 +72,18 @@ const resolvers = {
 
       return { token };
     },
+    updateUser: async (root, { input, email }, context) => {
+      if (!context.userEmail) throw Error("User not authenticated");
+      const updatePerson = await User.findOneAndUpdate({
+        email: email
+      }, input, { new: true })
+      return updatePerson
+    },
+    deleteUser: async (root, { email }, context) => {
+      if (!context.userEmail) throw Error("User not authenticated");
+      const deletePerson = await User.findOneAndRemove({ email })
+      return deletePerson
+    }
   },
   Subscription: {
     userCreated: {
