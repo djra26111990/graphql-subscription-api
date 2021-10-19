@@ -7,6 +7,7 @@ import express from "express";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 import typeDefs from '../typeDefs/typeDefs.js'
 import resolvers from '../resolvers/resolvers.js'
+import utils from '../utils/utils.js'
 
 export default async function StartServer() {
   const app = express();
@@ -16,6 +17,27 @@ export default async function StartServer() {
 
   const server = new ApolloServer({
     schema,
+    context: ({ req }) => {
+      return {
+        ...req,
+        userEmail:
+          req && req.headers.authorization
+            ? utils.getUserEmail(req)
+            : null
+      };
+    },
+    subscriptions: {
+      onConnect: (connectionParams) => {
+        if (connectionParams.authToken) {
+          return {
+            userEmail: utils.getUserEmail(
+              null,
+              connectionParams.authToken
+            )
+          };
+        }
+      }
+    },
     plugins: [ApolloServerPluginLandingPageGraphQLPlayground],
   });
 
