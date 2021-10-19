@@ -8,13 +8,18 @@ const pubsub = new PubSub();
 
 const resolvers = {
   Query: {
-    userCount: async () => User.countDocuments({}),
-    allUsers: async () => {
+    userCount: async (root, args, context) => {
+      if (!context.userEmail) throw Error('User not authenticated')
+      return User.countDocuments({})
+    },
+    allUsers: async (root, args, context) => {
+      if (!context.userEmail) throw Error('User not authenticated')
       const Users = await User.find().exec();
       return Users;
     },
-    findUser: async (root, args) => {
+    findUser: async (root, args, context) => {
       const { firstName } = args;
+      if (!context.userEmail) throw Error('User not authenticated')
       const user = await User.find(
         {
           firstName: firstName,
