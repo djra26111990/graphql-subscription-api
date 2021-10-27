@@ -8,6 +8,14 @@ const typeDefs = gql`
     fullName: String!
     email: String!
     password: String!
+    posts: [Post]
+  }
+
+  type Post {
+    id: ID!
+    title: String!
+    content: String!
+    likes: Int!
   }
 
   type Query {
@@ -38,6 +46,8 @@ const typeDefs = gql`
     login(input: LoginInput): AuthPayload!
     updateUser(input: updatePersonInput email: String!): User!
     deleteUser(email: String!): User
+    newPost(title: String! content: String!): Post!
+    likePost(id: ID!): Post!
   }
 
   type AuthPayload {
@@ -46,6 +56,8 @@ const typeDefs = gql`
 
   type Subscription {
     userCreated: User!
+    postCreated: Post!
+    likeCreated: Post!
   }
 `;
 

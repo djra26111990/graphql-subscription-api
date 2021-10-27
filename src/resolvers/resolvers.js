@@ -1,5 +1,6 @@
 import { PubSub } from "graphql-subscriptions";
 import User from "../models/persons.models.js";
+import Post from "../models/post.models.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import utils from "../utils/utils.js";
@@ -74,20 +75,63 @@ const resolvers = {
     },
     updateUser: async (root, { input, email }, context) => {
       if (!context.userEmail) throw Error("User not authenticated");
-      const updatePerson = await User.findOneAndUpdate({
-        email: email
-      }, input, { new: true })
-      return updatePerson
+      const updatePerson = await User.findOneAndUpdate(
+        {
+          email: email,
+        },
+        input,
+        { new: true }
+      );
+      return updatePerson;
     },
     deleteUser: async (root, { email }, context) => {
       if (!context.userEmail) throw Error("User not authenticated");
-      const deletePerson = await User.findOneAndRemove({ email })
-      return deletePerson
-    }
+      const deletePerson = await User.findOneAndRemove({ email });
+      return deletePerson;
+    },
+    newPost: async (root, { title, content }, context) => {
+      if (!context.userEmail) throw Error("User not authenticated");
+      
+      const post = {
+        title,
+        content,
+      };
+      const newPost = await Post.create(post);
+
+      const postUpdated = await User.findOneAndUpdate(
+        {
+          email: context.userEmail,
+        },
+        { $push: { posts: newPost._id } },
+        { new: true }
+      );
+
+      pubsub.publish("NEW_POST", { postCreated: newPost });
+
+      return newPost;
+    },
+    likePost: async (root, { id }, context) => {
+      if (!context.userEmail) throw Error("User not authenticated");
+      const postUpdated = await Post.findOneAndUpdate(
+        {
+          _id: id,
+        },
+        { $inc: { likes: 1 } },
+        { new: true }
+      );
+      pubsub.publish("NEW_LIKE", { likeCreated: postUpdated });
+      return postUpdated;
+    },
   },
   Subscription: {
     userCreated: {
       subscribe: () => pubsub.asyncIterator("NEW_USER"),
+    },
+    postCreated: {
+      subscribe: () => pubsub.asyncIterator("NEW_POST"),
+    },
+    likeCreated: {
+      subscribe: () => pubsub.asyncIterator("NEW_LIKE"),
     },
   },
 };
